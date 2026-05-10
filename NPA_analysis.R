@@ -24,6 +24,8 @@ format_summary <- function(file){
   
   # Chnage the data to numeric
   for (i in 3:ncol(totals)){
+    totals[,i] <- gsub("\\[c\\]", "5", totals[,i])
+    totals[,i] <- gsub("\\[z\\]", "0", totals[,i])
     totals[,i] <- as.numeric(gsub("\\s+", "", totals[,i]))
   }
   
@@ -60,8 +62,7 @@ totals_plot_4plus <- totals_plot %>%
 # Create the plot
 theme_set(ggplot2::theme_grey())
 ggplot(data = totals_plot_4plus, aes(Year, Count, colour = Level, group = Level)) +
-  geom_line()
-  +
+  geom_line() +
   geom_point()
 
 
@@ -100,6 +101,210 @@ mf_plot_totals
 # Create the plot
 
 ggplot(data = mf_plot_totals, aes(Year, Count, colour = Sex, group = Sex)) +
-  geom_line()
-+
+  geom_line() +
   geom_point()
+
+# ==============================================================================
+# Separating by institution
+
+# read in data
+ea_totals <- format_summary("NPA_education_authority.csv")
+ea_totals <- ea_totals %>%
+  mutate(Institution = "Education Authority")
+independent_totals <- format_summary("NPA_independent.csv")
+independent_totals <- independent_totals %>%
+  mutate(Institution = "Independent")
+fe_totals <- format_summary("NPA_FE.csv")
+fe_totals <- fe_totals %>%
+  mutate(Institution = "FE")
+other_totals <- format_summary("NPA_other.csv")
+other_totals <- other_totals %>%
+  mutate(Institution = "Other")
+
+# filter out totals only
+institution_totals <- bind_rows(
+  ea_totals,
+  independent_totals,
+  fe_totals,
+  other_totals
+) %>%
+  filter(Level == "Total") %>%
+  pivot_longer(
+    cols = `2025`:`2019`,
+    names_to = "Year",
+    values_to = "Count"
+  ) %>%
+  mutate(
+    Year = as.numeric(Year)
+  )
+
+# add in factors
+institution_totals$Institution <- factor(
+  institution_totals$Institution,
+  levels = c(
+    "Independent",
+    "Other",
+    "FE",
+    "Education Authority"
+  )
+)
+
+# Normalised percentage plot
+ggplot(institution_totals,
+       aes(x = factor(Year),
+           y = Count,
+           fill = Institution)) +
+  geom_col(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Year",
+    y = "Percentage of qualifications",
+    fill = "Institution",
+    title = "Share of NPA by institution type"
+  )
+
+# count plot
+ggplot(institution_totals,
+       aes(x = factor(Year),
+           y = Count,
+           fill = Institution)) +
+  geom_col(position = "stack") +
+  labs(
+    x = "Year",
+    y = "Percentage of qualifications",
+    fill = "Institution",
+    title = "Count of NPA by institution type"
+  )
+# ==============================================================================
+# is the pattern the same across all qualification levels?
+# ===================================
+# SCQF4
+
+scqf4_totals <- bind_rows(
+  ea_totals,
+  independent_totals,
+  fe_totals,
+  other_totals
+) %>%
+  filter(Level == "SCQF4") %>%
+  pivot_longer(
+    cols = `2025`:`2019`,
+    names_to = "Year",
+    values_to = "Count"
+  ) %>%
+  mutate(
+    Year = as.numeric(Year)
+  )
+
+# add in factors
+scqf4_totals$Institution <- factor(
+  institution_totals$Institution,
+  levels = c(
+    "Independent",
+    "Other",
+    "FE",
+    "Education Authority"
+  )
+)
+
+# Normalised percentage plot
+ggplot(scqf4_totals,
+       aes(x = factor(Year),
+           y = Count,
+           fill = Institution)) +
+  geom_col(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Year",
+    y = "Percentage of qualifications",
+    fill = "Institution",
+    title = "Share of SCQF4 by institution type"
+  )
+
+# ===================================
+# SCQF5
+
+scqf5_totals <- bind_rows(
+  ea_totals,
+  independent_totals,
+  fe_totals,
+  other_totals
+) %>%
+  filter(Level == "SCQF5") %>%
+  pivot_longer(
+    cols = `2025`:`2019`,
+    names_to = "Year",
+    values_to = "Count"
+  ) %>%
+  mutate(
+    Year = as.numeric(Year)
+  )
+
+# add in factors
+scqf5_totals$Institution <- factor(
+  institution_totals$Institution,
+  levels = c(
+    "Independent",
+    "Other",
+    "FE",
+    "Education Authority"
+  )
+)
+
+# Normalised percentage plot
+ggplot(scqf5_totals,
+       aes(x = factor(Year),
+           y = Count,
+           fill = Institution)) +
+  geom_col(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Year",
+    y = "Percentage of qualifications",
+    fill = "Institution",
+    title = "Share of SCQF5 by institution type"
+  )
+
+# ===================================
+# SCQF6
+
+scqf6_totals <- bind_rows(
+  ea_totals,
+  independent_totals,
+  fe_totals,
+  other_totals
+) %>%
+  filter(Level == "SCQF6") %>%
+  pivot_longer(
+    cols = `2025`:`2019`,
+    names_to = "Year",
+    values_to = "Count"
+  ) %>%
+  mutate(
+    Year = as.numeric(Year)
+  )
+
+# add in factors
+scqf6_totals$Institution <- factor(
+  institution_totals$Institution,
+  levels = c(
+    "Independent",
+    "Other",
+    "FE",
+    "Education Authority"
+  )
+)
+
+# Normalised percentage plot
+ggplot(scqf6_totals,
+       aes(x = factor(Year),
+           y = Count,
+           fill = Institution)) +
+  geom_col(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Year",
+    y = "Percentage of qualifications",
+    fill = "Institution",
+    title = "Share of SCQF6 by institution type"
+  )
