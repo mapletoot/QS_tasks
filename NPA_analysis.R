@@ -64,3 +64,42 @@ ggplot(data = totals_plot_4plus, aes(Year, Count, colour = Level, group = Level)
   +
   geom_point()
 
+
+# ==============================================================================
+# Reading in Males and females to compare
+males_summary <- format_summary("NPA_male.csv")
+males_summary
+females_summary <- format_summary("NPA_female.csv")
+females_summary
+
+males_summary <- males_summary %>%
+  mutate(Sex = "Male")
+
+females_summary <- females_summary %>%
+  mutate(Sex = "Female")
+
+mf_summary <- bind_rows(males_summary, females_summary)
+mf_summary
+
+mf_plot <- mf_summary %>%
+  pivot_longer(
+    cols = -c(Level, Sex),
+    names_to = "Year",
+    values_to = "Count"
+  ) %>%
+  mutate(
+    Year = as.numeric(Year)
+  )
+
+mf_plot
+
+mf_plot_totals <- mf_plot %>%
+  filter(Level == "Total")
+mf_plot_totals
+# ==============================================================================
+# Create the plot
+
+ggplot(data = mf_plot_totals, aes(Year, Count, colour = Sex, group = Sex)) +
+  geom_line()
++
+  geom_point()
