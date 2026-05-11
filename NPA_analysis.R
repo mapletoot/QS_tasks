@@ -11,6 +11,7 @@ library(RColorBrewer)
 library(wordcloud2)
 library(ggrepel)
 library(readxl)
+library(sf)
 
 # ==============================================================================
 # Reading in data
@@ -577,6 +578,8 @@ for (ea in authorities) {
 }
 df_ea$Rank_overall <- rankings_df$Rank_2025
 df_ea
+
+
 # Now create scores for each authority by using the top 5 rank of subjects in each authority,
 # comparing to the national rank of that subject, adding
 scores <- numeric(32)
@@ -596,7 +599,79 @@ for(i in 1:32){
   scores[i] <- sum(national_ranks)
 }
 
-scores
+# look at totals for each authority to see if the reason they are most similar 
+# is because that is where most qualifications are done
 
-?rank
+total_NPA <- as.numeric(32)
+total_NPA <- colSums(df_ea[,3:34])
+total_NPA
+
+# =====================================
+# Now we have the scores, plot them on the map. Too do this we need to import some
+# geoboundaries files
+
+# Import locations
+countries <- st_read("geoBoundaries-GBR-ADM1.geojson")
+councils <- st_read("geoBoundaries-GBR-ADM3.geojson")
+
+# Filter the scotland boundary from countries
+scotland <- countries[countries$shapeName == "Scotland", ]
+
+# Choose all councils that intersects the scotland boundary
+scottish_councils <- councils[st_intersects(councils, scotland, sparse = FALSE),]
+
+# Check what councils have been included
+scottish_councils$shapeName
+
+# Remove Cumbria and Northumberland
+scottish_councils <- scottish_councils[!(scottish_councils$shapeName %in% c("Cumbria", "Northumberland")),]
+
+# Change names so that the order matches Qualifications scotland order
+scottish_councils$shapeName[scottish_councils$shapeName == "Glasgow City"] <- "City of Glasgow"
+scottish_councils$shapeName[scottish_councils$shapeName == "City of Edinburgh"] <- "The City of Edinburgh"
+scottish_councils$shapeName[scottish_councils$shapeName == "Na h-Eileanan Siar"] <- "Comhairle Nan Eilean Siar"
+scottish_councils$shapeName[scottish_councils$shapeName == "Moray"] <- "The Moray"
+
+# The datframes are in alphabetical order of council name, so put these names in
+# the scores and totals vectors in order to plot them on the map.
+ea_names <- sort(scottish_councils$shapeName)
+names(scores) <- ea_names
+names(total_NPA) <- ea_names
+scores
+scores_capped <- pmin(scores, 100)
+
+scottish_councils$similarity_score <- scores_capped[scottish_councils$shapeName]
+scottish_councils$total_NPA <- total_NPA[scottish_councils$shapeName]
+
+
+
+# Scores plot
+ggplot(scottish_councils) +
+  geom_sf(aes(fill = similarity_score), colour = "white", linewidth = 0.2) +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "darkred",
+    name = "Distinctiveness\nscore"
+  ) +
+  labs(
+    title = "Similarity of each education authority to the national subject profile",
+    subtitle = "Lower scores indicate subject choices closer to the Scottish national ranking",
+    caption = "Score based on national ranks of each authority's top 5 subjects"
+  ) +
+  theme_minimal()
+
+# Totals plot
+ggplot(scottish_councils) +
+  geom_sf(aes(fill = total_NPA), colour = "white", linewidth = 0.2) +
+  scale_fill_gradient(
+    low = "lightblue",
+    high = "darkred",
+    name = "Distinctiveness\nscore"
+  ) +
+  labs(
+    title = "Similarity of each education authority to the national subject profile",
+    subtitle = "Lower scores indicate subject choices closer to the Scottish national ranking",
+    caption = "Score based on national ranks of each authority's top 5 subjects"
+  ) +
+  theme_minimal()
 
