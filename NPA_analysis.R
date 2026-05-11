@@ -7,6 +7,7 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(sgplot)
+library(RColorBrewer)
 
 # ==============================================================================
 # Reading in data
@@ -60,11 +61,16 @@ totals_plot_4plus <- totals_plot %>%
 
 # ==============================================================================
 # Create the plot
-theme_set(ggplot2::theme_grey())
-ggplot(data = totals_plot_4plus, aes(Year, Count, colour = Level, group = Level)) +
-  geom_line() +
-  geom_point()
 
+# colour scheme
+qualification_colours = c('#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854')
+# plot
+ggplot(data = totals_plot_4plus, aes(Year, Count, colour = Level, group = Level)) +
+  geom_line(size=1.3) +
+  geom_point(shape = 16, size = 3) +
+  scale_colour_manual(values = qualification_colours) +
+  scale_y_continuous(limits = c(0,NA))
+# display.brewer.all(colorblindFriendly = TRUE)
 
 # ==============================================================================
 # Reading in Males and females to compare
@@ -101,8 +107,12 @@ mf_plot_totals
 # Create the plot
 
 ggplot(data = mf_plot_totals, aes(Year, Count, colour = Sex, group = Sex)) +
-  geom_line() +
-  geom_point()
+  geom_line(size=1.3) +
+  geom_point(shape = 16, size = 3) +
+  scale_colour_brewer(palette = "Set2") +
+  scale_y_continuous(limits = c(0,NA))
+
+# display.brewer.all(colorblindFriendly = TRUE)
 
 # ==============================================================================
 # Separating by institution
@@ -148,13 +158,15 @@ institution_totals$Institution <- factor(
     "Education Authority"
   )
 )
-
+# colour scheme:
+institution_colours <- c('#a6cee3','#1f78b4','#b2df8a','#33a02c')
 # Normalised percentage plot
 ggplot(institution_totals,
        aes(x = factor(Year),
            y = Count,
            fill = Institution)) +
   geom_col(position = "fill") +
+  scale_fill_manual(values = institution_colours) +
   scale_y_continuous(labels = scales::percent) +
   labs(
     x = "Year",
@@ -168,7 +180,8 @@ ggplot(institution_totals,
        aes(x = factor(Year),
            y = Count,
            fill = Institution)) +
-  geom_col(position = "stack") +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = institution_colours) +
   labs(
     x = "Year",
     y = "Percentage of qualifications",
@@ -213,6 +226,7 @@ ggplot(scqf4_totals,
            y = Count,
            fill = Institution)) +
   geom_col(position = "fill") +
+  scale_fill_manual(values = institution_colours) +
   scale_y_continuous(labels = scales::percent) +
   labs(
     x = "Year",
@@ -257,6 +271,7 @@ ggplot(scqf5_totals,
            y = Count,
            fill = Institution)) +
   geom_col(position = "fill") +
+  scale_fill_manual(values = institution_colours) +
   scale_y_continuous(labels = scales::percent) +
   labs(
     x = "Year",
@@ -301,6 +316,7 @@ ggplot(scqf6_totals,
            y = Count,
            fill = Institution)) +
   geom_col(position = "fill") +
+  scale_fill_manual(values = institution_colours) +
   scale_y_continuous(labels = scales::percent) +
   labs(
     x = "Year",
