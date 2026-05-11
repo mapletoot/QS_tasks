@@ -10,6 +10,7 @@ library(sgplot)
 library(RColorBrewer)
 library(wordcloud2)
 library(ggrepel)
+library(readxl)
 
 # ==============================================================================
 # Reading in data
@@ -533,3 +534,69 @@ all_zero_subjects
 rankings_df$change <- rankings_df$Rank_2019 - rankings_df$Rank_2025
 rankings_df <- rankings_df[order(rankings_df$change),]
 rankings_df
+
+
+# ==================================
+# By education authority
+
+# get names of sheets for looping and naming columns
+sheets <- excel_sheets("subjects_by_ea.xlsx")
+
+# Now load in first sheet. Had a play around and 3 seemed to work nicely
+df_ea <- read_excel("subjects_by_ea.xlsx", sheet = sheets[2], skip = 3)
+# only retain qualifications - not totals
+df_ea <- as.data.frame(df_ea)
+df_ea <- df_ea[-(1:5),]
+df_ea <- df_ea[,1:3]
+df_ea[,3] <- gsub("\\[z\\]", "0", df_ea[,3])
+df_ea[,3] <- gsub("\\[c\\]", "5", df_ea[,3])
+df_ea[,3] <- gsub(",", "", df_ea[,3])
+df_ea[,3] <- as.numeric(gsub("\\s+", "",df_ea[,3]))
+colnames(df_ea)[3] <- sheets[2]
+
+# Loop through from sheet EA2 to EA32 and append each 2025 row to the dataframe
+for (i in 3:33){
+  new_sheet <- read_excel("subjects_by_ea.xlsx", sheet = sheets[i], skip = 3)
+  # only retain qualifications - not totals
+  new_sheet <- as.data.frame(new_sheet)
+  new_sheet <- new_sheet[-(1:5),]
+  new_sheet <- new_sheet[,1:3]
+  new_sheet[,3] <- gsub("\\[z\\]", "0", new_sheet[,3])
+  new_sheet[,3] <- gsub("\\[c\\]", "5", new_sheet[,3])
+  new_sheet[,3] <- gsub(",", "", new_sheet[,3])
+  new_sheet[,3] <- as.numeric(gsub("\\s+", "",new_sheet[,3]))
+  df_ea[[sheets[i]]] <- new_sheet[,3]
+}
+authorities = sheets[2:33]
+# Now make a ranking for the qualifications in each authority
+for (ea in authorities) {
+  
+  df_ea[[paste0("Rank_", ea)]] <-
+    rank(-df_ea[[ea]],
+         ties.method = "min")
+}
+df_ea$Rank_overall <- rankings_df$Rank_2025
+df_ea
+# Now create scores for each authority by using the top 5 rank of subjects in each authority,
+# comparing to the national rank of that subject, adding
+scores <- numeric(32)
+names(scores) <- authorities
+
+for(i in 1:32){
+  
+  rank_col <- paste0("Rank_", authorities[i])
+  
+  # rows corresponding to top 5 ranked subjects
+  top5_rows <- order(df_ea[[rank_col]])[1:5]
+  
+  # national ranks of those subjects
+  national_ranks <- df_ea$Rank_overall[top5_rows]
+  
+  # similarity score
+  scores[i] <- sum(national_ranks)
+}
+
+scores
+
+?rank
+
