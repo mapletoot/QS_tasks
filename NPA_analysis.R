@@ -328,35 +328,92 @@ ggplot(scqf6_totals,
 
 # ==============================================================================
 # Looking at types of qualifications:
-word_freq1 <- read.csv("wordcloud_no_punctuation.csv", header=FALSE)
 
-# appropriate column names and convert to numeric by removing space
-colnames(word_freq1) <- c("name", "freq")
-word_freq1$freq <- as.numeric(gsub("\\s+", "",word_freq1$freq))
-word_freq1 <- word_freq1[word_freq1$freq > 0,]
-word_freq1
+create_wordcloud <- function(file, filter = NULL, threshold = NULL, top = 50, year = "Awarded.Count.2025"){
+  #' A function that takes an NPA file from QS, cleans the punctuation and unhelpful
+  #' words aggregates the words that appear across different courses (eg sport coaching
+  #' and sport leadership woudl both contribute to the word sport) to return a wordcloud 
+  #' using the wordcloud2 library.
+  #' 
+  #' @file is an excel sheet from the Qualifications Scotland website turned into
+  #' a csv.
+  #' @filter allows values of "SCQF4", "SCQF5", "SCQF6" to filter the wordcloud by
+  #' only that level of qualification.
+  #' @threshold is the minimum frequency of a word for it to appear in the wordcloud.
+  #' Should not be used in conjunction with @top.
+  #' @top will put the top x words into the cloud. 50 is a good choice. Should not be
+  #' used in conjunction with @threshold. 
+  #' @year is the year used for the frequencies. Must match column name exactly.
+  #' 
+  #' @return a dataframe ready to pass to wordcloud2 function
 
-# split courses into separate words to be able to pick out sport, construction etc 
-# in different qualification names.
-course_words <- strsplit(
-  tolower(word_freq1$name),
-  split = " "
-)
+  
+  # Read in csv
+  df <- read.csv(file, header=TRUE)
+  
+  # Only keep relevant columns and give appropriate names
+  df <- df[,c(1,2, which(colnames(df) == year))]
+  colnames(df) <- c("level","name", "freq")
 
-# Now have a list and I need to assign the frequencies to each word as per the 
-# original data by matching frequencies to length of course name list
-course_freqs <- rep(word_freq1$freq, lengths(course_words))
+  # Remove unhelpful words or punctuation and replace z and c with 0 and 5 respectively
+  df$name <- gsub("\\(Level |\\)", "", df$name)
+  df$name <- gsub("SCQF Level 5", "", df$name)
+  df$name <- gsub("[:;()\\-]", "", df$name)
+  df$freq <- gsub("\\[z\\]", "0", df$freq)
+  df$freq <- gsub("\\[c\\]", "5", df$freq)
+  df$freq <- gsub(",", "", df$freq)
+  
 
-singular_words <- data.frame(words = unlist(course_words),
-                           freq = course_freqs)
-singular_words <- singular_words[singular_words$words != "",]
+  # appropriate column names and convert to numeric by removing space
+  colnames(df) <- c("level","name", "freq")
+  df$freq <- as.numeric(gsub("\\s+", "",df$freq))
+  df <- df[df$freq > 0,]
+  df
+  
+  # Filter out the relavent qualification level
+  if (!is.null(filter)){
+    df <- df[df$level == filter,]
+  }
+  
+  # Only want to retain the word and frequency information
+  df <- df[,c(2,3)]
+  
+  # split courses into separate words to be able to pick out sport, construction etc 
+  # in different qualification names.
+  course_words <- strsplit(
+    tolower(df$name),
+    split = " "
+  )
+  
+  # Now have a list and I need to assign the frequencies to each word as per the 
+  # original data by matching frequencies to length of course name list
+  course_freqs <- rep(df$freq, lengths(course_words))
+  
+  singular_words <- data.frame(words = unlist(course_words),
+                             freq = course_freqs)
+  
+  # remove blanks
+  singular_words <- singular_words[singular_words$words != "",]
+  
+  # aggregate each word:
+  wordcloud_df <- aggregate(freq ~ words,data = singular_words,FUN = sum)
+  
+  # Get rid of some unhelpful words
+  wordcloud_df <- wordcloud_df[!(wordcloud_df$words %in% c("and", "in", 1, 2, "a", "-","an", "at", "for", "of", "the", "to", "with")),]
+  
+  # order it for purpose of filtering appropriately
+  wordcloud_df <- wordcloud_df[order(wordcloud_df$freq, decreasing = TRUE), ]
+  
+  if (!is.null(threshold)){
+    wordcloud_df <- wordcloud_df[wordcloud_df$freq >= threshold,]
+  }
+  
+  if (!is.null(top)){
+    wordcloud_df <- wordcloud_df[1:top,]
+  }
+  
+  wordcloud_df
+}
 
-# aggregate each word:
-wordcloud_df <- aggregate(freq ~ words,data = singular_words,FUN = sum)
-wordcloud_df <- wordcloud_df[!(wordcloud_df$words %in% c("and", "in", 1, 2, "a", "-","an", "at", "for", "of", "the", "to", "with")),]
-wordcloud_df
-wordcloud_df <- wordcloud_df[order(-wordcloud_df$freq),]
-top_words1 <- wordcloud_df[1:50,]
-top_words2 <- wordcloud_df[wordcloud_df$freq >= 500,]
-?wordcloud2
-wordcloud2(top_words2)
+wordcloud_all <- create_wordcloud(file = "wordcloud_all.csv", top = 50, filter = "SCQF6")
+wordcloud2(wordcloud_all)
