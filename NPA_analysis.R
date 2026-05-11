@@ -8,6 +8,7 @@ library(dplyr)
 library(ggplot2)
 library(sgplot)
 library(RColorBrewer)
+library(wordcloud2)
 
 # ==============================================================================
 # Reading in data
@@ -324,3 +325,38 @@ ggplot(scqf6_totals,
     fill = "Institution",
     title = "Share of SCQF6 by institution type"
   )
+
+# ==============================================================================
+# Looking at types of qualifications:
+word_freq1 <- read.csv("wordcloud_no_punctuation.csv", header=FALSE)
+
+# appropriate column names and convert to numeric by removing space
+colnames(word_freq1) <- c("name", "freq")
+word_freq1$freq <- as.numeric(gsub("\\s+", "",word_freq1$freq))
+word_freq1 <- word_freq1[word_freq1$freq > 0,]
+word_freq1
+
+# split courses into separate words to be able to pick out sport, construction etc 
+# in different qualification names.
+course_words <- strsplit(
+  tolower(word_freq1$name),
+  split = " "
+)
+
+# Now have a list and I need to assign the frequencies to each word as per the 
+# original data by matching frequencies to length of course name list
+course_freqs <- rep(word_freq1$freq, lengths(course_words))
+
+singular_words <- data.frame(words = unlist(course_words),
+                           freq = course_freqs)
+singular_words <- singular_words[singular_words$words != "",]
+
+# aggregate each word:
+wordcloud_df <- aggregate(freq ~ words,data = singular_words,FUN = sum)
+wordcloud_df <- wordcloud_df[!(wordcloud_df$words %in% c("and", "in", 1, 2, "a", "-","an", "at", "for", "of", "the", "to", "with")),]
+wordcloud_df
+wordcloud_df <- wordcloud_df[order(-wordcloud_df$freq),]
+top_words1 <- wordcloud_df[1:50,]
+top_words2 <- wordcloud_df[wordcloud_df$freq >= 500,]
+?wordcloud2
+wordcloud2(top_words2)
