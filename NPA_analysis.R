@@ -9,6 +9,7 @@ library(ggplot2)
 library(sgplot)
 library(RColorBrewer)
 library(wordcloud2)
+library(ggrepel)
 
 # ==============================================================================
 # Reading in data
@@ -329,6 +330,9 @@ ggplot(scqf6_totals,
 # ==============================================================================
 # Looking at types of qualifications:
 
+# ====================================
+# Wordclouds
+
 create_wordcloud <- function(file, filter = NULL, threshold = NULL, top = 50, year = "Awarded.Count.2025"){
   #' A function that takes an NPA file from QS, cleans the punctuation and unhelpful
   #' words aggregates the words that appear across different courses (eg sport coaching
@@ -415,5 +419,117 @@ create_wordcloud <- function(file, filter = NULL, threshold = NULL, top = 50, ye
   wordcloud_df
 }
 
-wordcloud_all <- create_wordcloud(file = "wordcloud_all.csv", top = 50, filter = "SCQF6")
+wordcloud_all <- create_wordcloud(file = "wordcloud_all.csv", top = 50)
+wordcloud_4 <- create_wordcloud(file = "wordcloud_all.csv", top = 50, filter = "SCQF4")
+wordcloud_5 <- create_wordcloud(file = "wordcloud_all.csv", top = 30, filter = "SCQF5")
+wordcloud_6 <- create_wordcloud(file = "wordcloud_all.csv", top = 30, filter = "SCQF6")
+wordcloud_male <- create_wordcloud(file = "wordcloud_male.csv", top = 30)
+wordcloud_female <- create_wordcloud(file = "wordcloud_female.csv", top = 30)
+
 wordcloud2(wordcloud_all)
+wordcloud_all
+wordcloud2(wordcloud_6)
+wordcloud_male
+wordcloud2(wordcloud_female)
+wordcloud_female
+
+comparison_sex <- merge(
+  wordcloud_male,
+  wordcloud_female,
+  by = "words",
+  all = TRUE,
+  suffixes = c("_male", "_female")
+)
+comparison_sex[is.na(comparison_sex)] <- 0
+x <- comparison_sex$freq_male
+y <- comparison_sex$freq_female
+
+cosine_similarity <- sum(x * y) /
+  (sqrt(sum(x^2)) * sqrt(sum(y^2)))
+cosine_similarity
+
+comparison_level <- merge(
+  wordcloud_5,
+  wordcloud_6,
+  by = "words",
+  all = TRUE,
+  suffixes = c("_5", "_6")
+)
+comparison_level
+comparison_level[is.na(comparison_level)] <- 0
+x <- comparison_level$freq_5
+y <- comparison_level$freq_6
+
+cosine_similarity <- sum(x * y) /
+  (sqrt(sum(x^2)) * sqrt(sum(y^2)))
+cosine_similarity
+
+ggplot(comparison_sex,
+       aes(x = freq_male,
+           y = freq_female,
+           label = words)) +
+  geom_point() +
+  geom_text_repel() +
+  labs(
+    x = "Male frequency",
+    y = "Female frequency",
+    title = "Qualification word frequencies by gender"
+  )
+
+ggplot(comparison_level,
+       aes(x = freq_5,
+           y = freq_6,
+           label = words)) +
+  geom_point() +
+  geom_text_repel() +
+  labs(
+    x = "Level 5 frequency",
+    y = "Level 6 frequency",
+    title = "Qualification word frequencies by gender"
+  )
+
+# ====================================
+# Qualification rankings
+rankings_df = read.csv("wordcloud_all.csv")
+for (i in 3:ncol(rankings_df)){
+  rankings_df[,i] <- gsub("\\[z\\]", "0", rankings_df[,i])
+  rankings_df[,i] <- gsub("\\[c\\]", "5", rankings_df[,i])
+  rankings_df[,i] <- gsub(",", "", rankings_df[,i])
+  rankings_df[,i] <- as.numeric(gsub("\\s+", "",rankings_df[,i]))
+}
+
+
+rankings_df
+year_cols <- c("2025","2024","2023","2022","2021","2020","2019")
+colnames(rankings_df)[3:ncol(rankings_df)] <- year_cols
+
+low_uptake <- rankings_df[rowSums(rankings_df[year_cols]) <= 5,]
+low_uptake
+
+for (year in year_cols) {
+  
+  rankings_df[[paste0("Rank_", year)]] <-
+    rank(-rankings_df[[year]],
+         ties.method = "min")
+}
+
+top10_all <- data.frame(Rank = 1:10)
+
+for (year in year_cols) {
+  
+  ordered_rows <- rankings_df[order(-rankings_df[[year]]), ]
+  
+  top10_all[[year]] <- paste0(
+    ordered_rows$Subject[1:10],
+    " (", ordered_rows[[year]][1:10], ")"
+  )
+}
+top10_all
+
+all_zero_subjects <- rankings_df[rowSums(rankings_df[year_cols]) == 0,]
+all_zero_subjects
+
+
+rankings_df$change <- rankings_df$Rank_2019 - rankings_df$Rank_2025
+rankings_df <- rankings_df[order(rankings_df$change),]
+rankings_df
