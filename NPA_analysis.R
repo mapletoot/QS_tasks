@@ -6,7 +6,8 @@
 library(tidyr)
 library(dplyr)
 library(ggplot2)
-library(sgplot)
+library(htmlwidgets)
+library(webshot2)
 library(RColorBrewer)
 library(wordcloud2)
 library(ggrepel)
@@ -69,12 +70,76 @@ totals_plot_4plus <- totals_plot %>%
 # colour scheme
 qualification_colours = c('#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854')
 # plot
-ggplot(data = totals_plot_4plus, aes(Year, Count, colour = Level, group = Level)) +
+plot_overall <- ggplot(data = totals_plot_4plus, aes(Year, Count, colour = Level, group = Level)) +
   geom_line(size=1.3) +
   geom_point(shape = 16, size = 3) +
   scale_colour_manual(values = qualification_colours) +
-  scale_y_continuous(limits = c(0,NA))
-# display.brewer.all(colorblindFriendly = TRUE)
+  # horizontal grid lines every 1000
+  scale_y_continuous(
+    expand = expansion(add = c(0, 1000)),
+    limits = c(0, NA),
+    minor_breaks = seq(0, 20000, 1000),
+    breaks = seq(0, 20000, 5000)
+  ) +
+  
+  scale_x_continuous(
+    breaks = unique(totals_plot_4plus$Year)
+  ) +
+  
+  labs(
+    title = "NPA Counts Over Time by Level",
+    x = "Year",
+    y = "Count",
+    colour = "Level"
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    
+    # larger fonts
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    
+    # bring back axis lines
+    axis.line = element_line(
+      colour = "black",
+      linewidth = 1
+    ),
+    
+    # axis ticks
+    axis.ticks = element_line(
+      colour = "black",
+      linewidth = 0.8
+    ),
+    
+    # remove vertical grid lines
+    #panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    
+    # thick horizontal lines every 5000
+    panel.grid.major.y = element_line(
+      colour = "grey60",
+      linewidth = 1
+    ),
+    
+    # thinner horizontal lines every 1000
+    panel.grid.minor.y = element_line(
+      colour = "grey85",
+      linewidth = 0.4
+    )
+  )
+plot_overall
+ggsave(
+  "plot_overall.png",
+  plot = plot_overall,
+  width = 7.5,
+  height = 7.5,
+  dpi = 200
+)
 
 # ==============================================================================
 # Reading in Males and females to compare
@@ -110,11 +175,76 @@ mf_plot_totals
 # ==============================================================================
 # Create the plot
 
-ggplot(data = mf_plot_totals, aes(Year, Count, colour = Sex, group = Sex)) +
+plot_gender <- ggplot(data = mf_plot_totals, aes(Year, Count, colour = Sex, group = Sex)) +
   geom_line(size=1.3) +
   geom_point(shape = 16, size = 3) +
-  scale_colour_brewer(palette = "Set2") +
-  scale_y_continuous(limits = c(0,NA))
+  scale_colour_brewer(palette = "Paired") +
+  # horizontal grid lines every 1000
+  scale_y_continuous(
+    expand = expansion(add = c(0, 1000)),
+    limits = c(0, NA),
+    minor_breaks = seq(0, 25000, 1000),
+    breaks = seq(0, 25000, 5000)
+  ) +
+  
+  scale_x_continuous(
+    breaks = unique(totals_plot_4plus$Year)
+  ) +
+  
+  labs(
+    title = "NPA Counts Over Time by Sex",
+    x = "Year",
+    y = "Count",
+    colour = "Level"
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    
+    # larger fonts
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    
+    # bring back axis lines
+    axis.line = element_line(
+      colour = "black",
+      linewidth = 1
+    ),
+    
+    # axis ticks
+    axis.ticks = element_line(
+      colour = "black",
+      linewidth = 0.8
+    ),
+    
+    # remove vertical grid lines
+    #panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    
+    # thick horizontal lines every 5000
+    panel.grid.major.y = element_line(
+      colour = "grey60",
+      linewidth = 1
+    ),
+    
+    # thinner horizontal lines every 1000
+    panel.grid.minor.y = element_line(
+      colour = "grey85",
+      linewidth = 0.4
+    )
+  )
+
+ggsave(
+  "plot_gender.png",
+  plot = plot_gender,
+  width = 7.5,
+  height = 7.5,
+  dpi = 200
+)
 
 # display.brewer.all(colorblindFriendly = TRUE)
 
@@ -165,7 +295,7 @@ institution_totals$Institution <- factor(
 # colour scheme:
 institution_colours <- c('#a6cee3','#1f78b4','#b2df8a','#33a02c')
 # Normalised percentage plot
-ggplot(institution_totals,
+plot_institution_pct <- ggplot(institution_totals,
        aes(x = factor(Year),
            y = Count,
            fill = Institution)) +
@@ -176,11 +306,49 @@ ggplot(institution_totals,
     x = "Year",
     y = "Percentage of qualifications",
     fill = "Institution",
-    title = "Share of NPA by institution type"
+    title = "Share of NPA by Institution Type"
+  ) +
+  
+  scale_y_continuous(
+    expand = expansion(add = c(0, 0)),
+    limits = c(0, NA),
+    minor_breaks = seq(0, 25000, 1000),
+    breaks = seq(0, 25000, 5000)
+  ) +
+  
+  geom_text(
+    data = institution_totals %>%
+      group_by(Year) %>%
+      mutate(Percentage = Count / sum(Count)) %>%
+      filter(Institution != "Independent"),
+    aes(
+      label = scales::percent(Percentage, accuracy = 1)
+    ),
+    position = position_fill(vjust = 0.5),
+    size = 5,
+    colour = "black"
+  ) +
+  theme(
+    
+    # larger fonts
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14)
+    
   )
 
+ggsave(
+  "plot_institution_pct.png",
+  plot = plot_institution_pct,
+  width = 7.5,
+  height = 7.5,
+  dpi = 200
+)
+
 # count plot
-ggplot(institution_totals,
+plot_institution_count <- ggplot(institution_totals,
        aes(x = factor(Year),
            y = Count,
            fill = Institution)) +
@@ -188,10 +356,32 @@ ggplot(institution_totals,
   scale_fill_manual(values = institution_colours) +
   labs(
     x = "Year",
-    y = "Percentage of qualifications",
+    y = "Number of Awards",
     fill = "Institution",
     title = "Count of NPA by institution type"
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    
+    # larger fonts
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14)
+    
   )
+
+ggsave(
+  "plot_institution_count.png",
+  plot = plot_institution_count,
+  width = 7.5,
+  height = 7.5,
+  dpi = 200
+)
+
 # ==============================================================================
 # is the pattern the same across all qualification levels?
 # ===================================
@@ -225,7 +415,7 @@ scqf4_totals$Institution <- factor(
 )
 
 # Normalised percentage plot
-ggplot(scqf4_totals,
+plot_scqf4 <- ggplot(scqf4_totals,
        aes(x = factor(Year),
            y = Count,
            fill = Institution)) +
@@ -236,8 +426,35 @@ ggplot(scqf4_totals,
     x = "Year",
     y = "Percentage of qualifications",
     fill = "Institution",
-    title = "Share of SCQF4 by institution type"
+    title = "SCQF4 Share"
+  ) +
+  
+  scale_y_continuous(
+    expand = expansion(add = c(0, 0)),
+    limits = c(0, NA),
+    minor_breaks = seq(0, 25000, 1000),
+    breaks = seq(0, 25000, 5000)
+  ) +
+
+  theme(
+    
+    # larger fonts
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14)
+    
   )
+
+ggsave(
+  "plot_scqf4.png",
+  plot = plot_scqf4,
+  width = 7,
+  height = 7.5,
+  dpi = 200
+)
+
 
 # ===================================
 # SCQF5
@@ -270,7 +487,7 @@ scqf5_totals$Institution <- factor(
 )
 
 # Normalised percentage plot
-ggplot(scqf5_totals,
+plot_scqf5 <- ggplot(scqf5_totals,
        aes(x = factor(Year),
            y = Count,
            fill = Institution)) +
@@ -281,8 +498,41 @@ ggplot(scqf5_totals,
     x = "Year",
     y = "Percentage of qualifications",
     fill = "Institution",
-    title = "Share of SCQF5 by institution type"
+    title = "SCQF4 Share"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Year",
+    y = "Percentage of qualifications",
+    fill = "Institution",
+    title = "SCQF5 Share"
+  ) +
+  
+  scale_y_continuous(
+    expand = expansion(add = c(0, 0)),
+    limits = c(0, NA),
+    minor_breaks = seq(0, 25000, 1000),
+    breaks = seq(0, 25000, 5000)
+  ) +
+  
+  theme(
+    
+    # larger fonts
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14)
+    
   )
+
+ggsave(
+  "plot_scqf5.png",
+  plot = plot_scqf5,
+  width = 7,
+  height = 7.5,
+  dpi = 200
+)
 
 # ===================================
 # SCQF6
@@ -315,7 +565,7 @@ scqf6_totals$Institution <- factor(
 )
 
 # Normalised percentage plot
-ggplot(scqf6_totals,
+plot_scqf6 <- ggplot(scqf6_totals,
        aes(x = factor(Year),
            y = Count,
            fill = Institution)) +
@@ -326,8 +576,34 @@ ggplot(scqf6_totals,
     x = "Year",
     y = "Percentage of qualifications",
     fill = "Institution",
-    title = "Share of SCQF6 by institution type"
+    title = "SCQF6 Share"
+  ) +
+  
+  scale_y_continuous(
+    expand = expansion(add = c(0, 0)),
+    limits = c(0, NA),
+    minor_breaks = seq(0, 25000, 1000),
+    breaks = seq(0, 25000, 5000)
+  ) +
+  
+  theme(
+    
+    # larger fonts
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14)
+    
   )
+
+ggsave(
+  "plot_scqf6.png",
+  plot = plot_scqf6,
+  width = 7,
+  height = 7.5,
+  dpi = 200
+)
 
 # ==============================================================================
 # Looking at types of qualifications:
@@ -428,13 +704,11 @@ wordcloud_6 <- create_wordcloud(file = "wordcloud_all.csv", top = 30, filter = "
 wordcloud_male <- create_wordcloud(file = "wordcloud_male.csv", top = 30)
 wordcloud_female <- create_wordcloud(file = "wordcloud_female.csv", top = 30)
 
+# Need to expand display window in order for this to plot properly
 wordcloud2(wordcloud_all)
-wordcloud_all
-wordcloud2(wordcloud_6)
-wordcloud_male
-wordcloud2(wordcloud_female)
-wordcloud_female
 
+# ===============================
+# Cosine similarity of owrd frequencies between sexes
 comparison_sex <- merge(
   wordcloud_male,
   wordcloud_female,
@@ -442,56 +716,86 @@ comparison_sex <- merge(
   all = TRUE,
   suffixes = c("_male", "_female")
 )
+
+# Calculate cosine similarity by assigning NAs to 0s
 comparison_sex[is.na(comparison_sex)] <- 0
 x <- comparison_sex$freq_male
 y <- comparison_sex$freq_female
-
 cosine_similarity <- sum(x * y) /
   (sqrt(sum(x^2)) * sqrt(sum(y^2)))
 cosine_similarity
 
-comparison_level <- merge(
-  wordcloud_5,
-  wordcloud_6,
-  by = "words",
-  all = TRUE,
-  suffixes = c("_5", "_6")
-)
-comparison_level
-comparison_level[is.na(comparison_level)] <- 0
-x <- comparison_level$freq_5
-y <- comparison_level$freq_6
 
-cosine_similarity <- sum(x * y) /
-  (sqrt(sum(x^2)) * sqrt(sum(y^2)))
-cosine_similarity
-
-ggplot(comparison_sex,
+# Plot the values on a cartesian grid for better comparison
+plot_word_coords <- ggplot(comparison_sex,
        aes(x = freq_male,
            y = freq_female,
            label = words)) +
-  geom_point() +
-  geom_text_repel() +
+  
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    colour = "grey60"
+  ) +
+  geom_abline(
+    slope = 0,
+    intercept = 0,
+    linetype = "dashed",
+    colour = "grey60"
+  ) +
+  geom_abline(
+    slope = 999999999,
+    intercept = 0,
+    linetype = "dashed",
+    colour = "grey60"
+  ) +
+  
+  geom_point(
+    size = 3,
+    alpha = 0.7,
+    colour = "#1f78b4"
+  ) +
+  
+  geom_text_repel(
+    size = 4,
+    max.overlaps = Inf,
+    box.padding = 0.4,
+    point.padding = 0.3
+  ) +
+  
   labs(
     x = "Male frequency",
     y = "Female frequency",
-    title = "Qualification word frequencies by gender"
+    title = "NPA Word Frequencies by Sex",
+    subtitle = paste0("Cosine similarity = ", round(cosine_similarity, 3))
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title = element_text(size = 15),
+    axis.text = element_text(size = 12),
+      panel.background = element_rect(fill = "#f2fff2", colour = NA),
+      plot.background = element_rect(fill = "#f2fff2", colour = NA)
   )
 
-ggplot(comparison_level,
-       aes(x = freq_5,
-           y = freq_6,
-           label = words)) +
-  geom_point() +
-  geom_text_repel() +
-  labs(
-    x = "Level 5 frequency",
-    y = "Level 6 frequency",
-    title = "Qualification word frequencies by gender"
-  )
+plot_word_coords
+ggsave(
+  "plot_word_coords.png",
+  plot = plot_word_coords,
+  width = 10,
+  height = 10,
+  dpi = 200
+)
 
-# ====================================
-# Qualification rankings
+# ==============================================================================
+# Now look at the actual qualifications in a bit more detail, rather than just
+# the words
+
+# Create Qualification annual rankings by number of awards
 rankings_df = read.csv("wordcloud_all.csv")
 for (i in 3:ncol(rankings_df)){
   rankings_df[,i] <- gsub("\\[z\\]", "0", rankings_df[,i])
@@ -505,7 +809,123 @@ rankings_df
 year_cols <- c("2025","2024","2023","2022","2021","2020","2019")
 colnames(rankings_df)[3:ncol(rankings_df)] <- year_cols
 
-low_uptake <- rankings_df[rowSums(rankings_df[year_cols]) <= 5,]
+zero_entries <- colSums(rankings_df[year_cols] == 0)
+names(zero_entries) <- year_cols
+zero_entries <- round(zero_entries / nrow(rankings_df), 2)
+zero_entries
+
+# reshape to long format
+plot_df <- rankings_df %>%
+  
+  # keep only SCQF4-6
+  filter(Level %in% c("SCQF4", "SCQF5", "SCQF6")) %>%
+  
+  pivot_longer(
+    cols = all_of(year_cols),
+    names_to = "Year",
+    values_to = "Awards"
+  ) %>%
+  
+  group_by(Level, Year) %>%
+  
+  summarise(
+    
+    # number of qualifications with 0 recipients
+    zero_subjects = sum(Awards == 0),
+    
+    # total number of qualifications at that level
+    total_subjects = n(),
+    
+    # percentage with 0 recipients
+    zero_percentage = zero_subjects / total_subjects,
+    
+    .groups = "drop"
+  )
+
+plot_df
+
+
+# make Year numeric for plotting
+plot_df <- plot_df %>%
+  mutate(Year = as.numeric(Year))
+
+plot_zero_percent <- ggplot(
+  data = plot_df,
+  aes(
+    x = Year,
+    y = zero_percentage,
+    colour = Level,
+    group = Level
+  )
+) +
+  geom_line(linewidth = 1.3) +
+  geom_point(shape = 16, size = 3) +
+  
+  scale_colour_manual(values = qualification_colours) +
+  
+  scale_y_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, 0.2),
+    minor_breaks = seq(0, 1, 0.1),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  
+  scale_x_continuous(
+    breaks = sort(unique(plot_df$Year))
+  ) +
+  
+  labs(
+    title = "Percentage of NPA with Zero Recipients by Level",
+    x = "Year",
+    y = "Percentage with zero recipients",
+    colour = "Level"
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    
+    axis.line = element_line(
+      colour = "black",
+      linewidth = 1
+    ),
+    
+    axis.ticks = element_line(
+      colour = "black",
+      linewidth = 0.8
+    ),
+    
+    panel.grid.minor.x = element_blank(),
+    
+    panel.grid.major.y = element_line(
+      colour = "grey60",
+      linewidth = 1
+    ),
+    
+    panel.grid.minor.y = element_line(
+      colour = "grey85",
+      linewidth = 0.4
+    )
+  )
+
+plot_zero_percent
+
+ggsave(
+  "plot_zero_percent.png",
+  plot = plot_zero_percent,
+  width = 7.5,
+  height = 7.5,
+  dpi = 200
+)
+
+
+low_uptake <- rankings_df[rowSums(rankings_df[year_cols][1:3]) <= 0,]
+
 low_uptake
 
 for (year in year_cols) {
@@ -532,11 +952,56 @@ all_zero_subjects <- rankings_df[rowSums(rankings_df[year_cols]) == 0,]
 all_zero_subjects
 
 
-rankings_df$change <- rankings_df$Rank_2019 - rankings_df$Rank_2025
-rankings_df <- rankings_df[order(rankings_df$change),]
-rankings_df
+rankings_df$change <- rankings_df$'2025' - rankings_df$'2022'
+rankings_df3 <- rankings_df[order(-rankings_df$change),]
+rankings_df3
 
+# ==================================
+# Measuring the consistency:
+rank_cols <- c(
+  "Rank_2025","Rank_2024","Rank_2023",
+  "Rank_2022","Rank_2021","Rank_2020","Rank_2019"
+)
 
+consistency_df <- rankings_df %>%
+  
+  rowwise() %>%
+  
+  mutate(
+    
+    # average rank over years
+    mean_rank = mean(c_across(all_of(rank_cols))),
+    
+    # standard deviation of rank
+    rank_sd = sd(c_across(all_of(rank_cols))),
+    
+    # total spread of ranks
+    rank_range = max(c_across(all_of(rank_cols))) -
+      min(c_across(all_of(rank_cols))),
+    
+    # average year-to-year movement
+    mean_yearly_change = mean(
+      abs(diff(c_across(all_of(rank_cols))))
+    )
+    
+  ) %>%
+  
+  ungroup() %>%
+  
+  arrange(rank_sd)
+
+ranks_sd <- consistency_df %>%
+  select(
+    Level,
+    Subject,
+    mean_rank,
+    rank_sd,
+    rank_range,
+    mean_yearly_change
+  ) %>%
+  head(30)
+
+print(ranks_sd, n = 30)
 # ==================================
 # By education authority
 
@@ -554,7 +1019,7 @@ df_ea[,3] <- gsub("\\[c\\]", "5", df_ea[,3])
 df_ea[,3] <- gsub(",", "", df_ea[,3])
 df_ea[,3] <- as.numeric(gsub("\\s+", "",df_ea[,3]))
 colnames(df_ea)[3] <- sheets[2]
-
+df_ea
 # Loop through from sheet EA2 to EA32 and append each 2025 row to the dataframe
 for (i in 3:33){
   new_sheet <- read_excel("subjects_by_ea.xlsx", sheet = sheets[i], skip = 3)
@@ -568,6 +1033,7 @@ for (i in 3:33){
   new_sheet[,3] <- as.numeric(gsub("\\s+", "",new_sheet[,3]))
   df_ea[[sheets[i]]] <- new_sheet[,3]
 }
+df_ea
 authorities = sheets[2:33]
 # Now make a ranking for the qualifications in each authority
 for (ea in authorities) {
@@ -639,39 +1105,76 @@ names(scores) <- ea_names
 names(total_NPA) <- ea_names
 scores
 scores_capped <- pmin(scores, 100)
-
+scores
 scottish_councils$similarity_score <- scores_capped[scottish_councils$shapeName]
 scottish_councils$total_NPA <- total_NPA[scottish_councils$shapeName]
 
 
 
 # Scores plot
-ggplot(scottish_councils) +
+plot_map_scores <- ggplot(scottish_councils) +
   geom_sf(aes(fill = similarity_score), colour = "white", linewidth = 0.2) +
   scale_fill_gradient(
-    low = "lightblue",
-    high = "darkred",
+    low = "darkred",
+    high = "lightblue",
     name = "Distinctiveness\nscore"
   ) +
   labs(
-    title = "Similarity of each education authority to the national subject profile",
+    title = "Distinctiveness of each EA vs national NPA subject profile (2025)",
     subtitle = "Lower scores indicate subject choices closer to the Scottish national ranking",
-    caption = "Score based on national ranks of each authority's top 5 subjects"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    # larger fonts
+    plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 14),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+plot_map_scores
+ggsave(
+  "plot_map_scores.png",
+  plot = plot_map_scores,
+  width = 7.5,
+  height = 7.5,
+  dpi = 200
+)
+
 
 # Totals plot
-ggplot(scottish_councils) +
+plot_map_totals <- ggplot(scottish_councils) +
   geom_sf(aes(fill = total_NPA), colour = "white", linewidth = 0.2) +
   scale_fill_gradient(
     low = "lightblue",
     high = "darkred",
-    name = "Distinctiveness\nscore"
+    name = "Total NPAs\n2025"
   ) +
   labs(
-    title = "Similarity of each education authority to the national subject profile",
-    subtitle = "Lower scores indicate subject choices closer to the Scottish national ranking",
-    caption = "Score based on national ranks of each authority's top 5 subjects"
+    title = "Total NPA by EA in 2025",
+    subtitle = "Only education authority schools contribute to this plot"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(
+    # larger fonts
+    plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 14),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+plot_map_totals
 
+ggsave(
+  "plot_map_totals.png",
+  plot = plot_map_totals,
+  width = 7.5,
+  height = 7.5,
+  dpi = 200
+)
